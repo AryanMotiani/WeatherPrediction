@@ -1,0 +1,733 @@
+// NASA Weather Probability Application JavaScript
+
+class WeatherProbabilityApp {
+    constructor() {
+        this.locations = {
+            'new-york': { name: 'New York, NY', lat: 40.7128, lon: -74.006 },
+            'los-angeles': { name: 'Los Angeles, CA', lat: 34.0522, lon: -118.2437 },
+            'phoenix': { name: 'Phoenix, AZ', lat: 33.4484, lon: -112.074 }
+        };
+        
+        this.selectedLocation = null;
+        this.selectedDate = null;
+        this.map = null;
+        this.mapMarker = null;
+        this.weatherData = null;
+        this.currentResults = null;
+        
+        this.init();
+    }
+
+    async init() {
+        this.setupEventListeners();
+        this.initializeMap();
+        this.setDefaultDate();
+        await this.loadWeatherData();
+    }
+
+    setupEventListeners() {
+        // Location selection
+        document.getElementById('location-select').addEventListener('change', (e) => {
+            this.handleLocationChange(e.target.value);
+        });
+
+        // Date selection - Fixed event listener
+        document.getElementById('date-input').addEventListener('change', (e) => {
+            this.handleDateChange(e.target.value);
+        });
+
+        // Also listen for input events for better responsiveness
+        document.getElementById('date-input').addEventListener('input', (e) => {
+            this.handleDateChange(e.target.value);
+        });
+
+        // Quick date buttons - Fixed event handling
+        document.querySelectorAll('.quick-date-buttons .btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const days = parseInt(e.target.dataset.days);
+                this.setQuickDate(days);
+            });
+        });
+
+        // Parameter controls
+        document.getElementById('select-all-params').addEventListener('click', () => {
+            this.toggleAllParameters(true);
+        });
+
+        document.getElementById('clear-all-params').addEventListener('click', () => {
+            this.toggleAllParameters(false);
+        });
+
+        // Analysis button
+        document.getElementById('analyze-btn').addEventListener('click', () => {
+            this.analyzeWeather();
+        });
+
+        // Export buttons
+        document.getElementById('export-csv').addEventListener('click', () => {
+            this.exportData('csv');
+        });
+
+        document.getElementById('export-json').addEventListener('click', () => {
+            this.exportData('json');
+        });
+
+        document.getElementById('share-results').addEventListener('click', () => {
+            this.shareResults();
+        });
+
+        // Custom location modal
+        document.getElementById('custom-location-btn').addEventListener('click', () => {
+            this.openCustomLocationModal();
+        });
+
+        document.getElementById('modal-close').addEventListener('click', () => {
+            this.closeCustomLocationModal();
+        });
+
+        document.getElementById('modal-cancel').addEventListener('click', () => {
+            this.closeCustomLocationModal();
+        });
+
+        document.getElementById('modal-save').addEventListener('click', () => {
+            this.saveCustomLocation();
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('custom-location-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'custom-location-modal') {
+                this.closeCustomLocationModal();
+            }
+        });
+    }
+
+    initializeMap() {
+        this.map = L.map('map').setView([39.8283, -98.5795], 4); // Center of USA
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        this.map.on('click', (e) => {
+            this.handleMapClick(e.latlng);
+        });
+    }
+
+    setDefaultDate() {
+        const today = new Date();
+        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const dateString = nextWeek.toISOString().split('T')[0];
+        
+        document.getElementById('date-input').value = dateString;
+        this.handleDateChange(dateString);
+    }
+
+    async loadWeatherData() {
+        try {
+            const response = await fetch('https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/89de445a094070690ab97376a11c4876/40e16572-b54a-4fba-b793-74862e6d68a7/34ec2f12.json');
+            this.weatherData = await response.json();
+            
+            // Load probability calculation functions
+            const script = document.createElement('script');
+            script.src = 'https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/89de445a094070690ab97376a11c4876/2dffdd09-3906-47c8-90ef-d9c58c1b2b81/285f1197.js';
+            script.onload = () => {
+                console.log('Weather probability functions loaded');
+            };
+            document.head.appendChild(script);
+        } catch (error) {
+            console.error('Error loading weather data:', error);
+            this.showError('Failed to load weather data. Please try again later.');
+        }
+    }
+
+    handleLocationChange(locationKey) {
+        if (!locationKey) {
+            this.selectedLocation = null;
+            this.updateCoordinatesDisplay();
+            return;
+        }
+
+        const location = this.locations[locationKey];
+        if (location) {
+            this.selectedLocation = location;
+            this.updateCoordinatesDisplay();
+            this.updateMapLocation(location.lat, location.lon);
+        }
+    }
+
+    handleMapClick(latlng) {
+        const customLocation = {
+            name: `Custom (${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)})`,
+            lat: latlng.lat,
+            lon: latlng.lng
+        };
+        
+        this.selectedLocation = customLocation;
+        this.updateCoordinatesDisplay();
+        this.updateMapLocation(latlng.lat, latlng.lng);
+        
+        // Reset dropdown
+        document.getElementById('location-select').value = '';
+    }
+
+    updateCoordinatesDisplay() {
+        const latDisplay = document.getElementById('lat-display');
+        const lonDisplay = document.getElementById('lon-display');
+        
+        if (this.selectedLocation) {
+            latDisplay.textContent = this.selectedLocation.lat.toFixed(4);
+            lonDisplay.textContent = this.selectedLocation.lon.toFixed(4);
+        } else {
+            latDisplay.textContent = '--';
+            lonDisplay.textContent = '--';
+        }
+    }
+
+    updateMapLocation(lat, lon) {
+        if (this.mapMarker) {
+            this.map.removeLayer(this.mapMarker);
+        }
+        
+        this.mapMarker = L.marker([lat, lon]).addTo(this.map);
+        this.map.setView([lat, lon], 8);
+    }
+
+    // Fixed date change handling
+    handleDateChange(dateString) {
+        if (!dateString) return;
+        
+        // Parse the date properly
+        const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Validate the date
+        if (isNaN(date.getTime())) {
+            console.error('Invalid date:', dateString);
+            return;
+        }
+        
+        this.selectedDate = date;
+        
+        // Update date display with proper formatting
+        const monthDay = `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+        
+        // Calculate day of year correctly
+        const start = new Date(date.getFullYear(), 0, 0);
+        const diff = date - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+        
+        document.getElementById('month-day-display').textContent = monthDay;
+        document.getElementById('day-of-year-display').textContent = dayOfYear;
+        
+        console.log('Date updated:', { dateString, monthDay, dayOfYear, date });
+    }
+
+    // Fixed quick date setting
+    setQuickDate(days) {
+        const today = new Date();
+        const futureDate = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+        const dateString = futureDate.toISOString().split('T')[0];
+        
+        // Update the input field
+        const dateInput = document.getElementById('date-input');
+        dateInput.value = dateString;
+        
+        // Trigger the change handler
+        this.handleDateChange(dateString);
+        
+        console.log('Quick date set:', { days, dateString, futureDate });
+    }
+
+    toggleAllParameters(checked) {
+        const checkboxes = document.querySelectorAll('input[name="weather-param"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = checked;
+        });
+    }
+
+    getSelectedParameters() {
+        const checkboxes = document.querySelectorAll('input[name="weather-param"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    showLoading() {
+        document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    hideLoading() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    showError(message) {
+        alert(message); // Simple error handling - could be enhanced with a proper toast/notification system
+    }
+
+    async analyzeWeather() {
+        if (!this.selectedLocation) {
+            this.showError('Please select a location first.');
+            return;
+        }
+
+        if (!this.selectedDate) {
+            this.showError('Please select a date first.');
+            return;
+        }
+
+        const selectedParams = this.getSelectedParameters();
+        if (selectedParams.length === 0) {
+            this.showError('Please select at least one weather parameter to analyze.');
+            return;
+        }
+
+        this.showLoading();
+
+        try {
+            // Simulate analysis with sample data for now
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Generate dynamic results based on selected location and date
+            const month = this.selectedDate.getMonth() + 1;
+            const isWinter = month === 12 || month === 1 || month === 2;
+            const isSummer = month === 6 || month === 7 || month === 8;
+            
+            // Adjust probabilities based on season and location
+            const baseProbabilities = {
+                rain: 25,
+                heavy_rain: 5,
+                very_hot: isSummer ? 25 : 5,
+                very_cold: isWinter ? 15 : 0,
+                high_wind: 20,
+                high_humidity: isSummer ? 40 : 25,
+                uncomfortable: isSummer ? 30 : (isWinter ? 20 : 15)
+            };
+            
+            // Add some randomness and location-specific adjustments
+            const locationMultiplier = this.selectedLocation.name.includes('Phoenix') ? 1.3 : 
+                                     this.selectedLocation.name.includes('Los Angeles') ? 0.8 : 1.0;
+            
+            const probabilities = {};
+            selectedParams.forEach(param => {
+                const baseValue = baseProbabilities[param] || 10;
+                const adjusted = Math.min(Math.round(baseValue * locationMultiplier + (Math.random() * 10 - 5)), 100);
+                probabilities[param] = Math.max(adjusted, 0);
+            });
+            
+            // Calculate suitability score
+            const avgProbability = Object.values(probabilities).reduce((sum, val) => sum + val, 0) / Object.values(probabilities).length;
+            const suitabilityScore = Math.max(10, Math.min(100, Math.round(100 - avgProbability * 1.5)));
+            
+            const riskLevel = avgProbability <= 15 ? 'Low' : avgProbability <= 30 ? 'Moderate' : 'High';
+            
+            const sampleResults = {
+                location: this.selectedLocation.name,
+                date: this.selectedDate.toISOString().split('T')[0],
+                coordinates: {
+                    lat: this.selectedLocation.lat,
+                    lon: this.selectedLocation.lon
+                },
+                probabilities: probabilities,
+                suitability_score: suitabilityScore,
+                risk_level: riskLevel,
+                recommendations: this.generateRecommendations(probabilities, riskLevel),
+                historical_averages: {
+                    temperature: isSummer ? 28.5 : (isWinter ? 5.2 : 18.3),
+                    max_temperature: isSummer ? 35.1 : (isWinter ? 10.8 : 24.8),
+                    min_temperature: isSummer ? 21.9 : (isWinter ? -0.4 : 11.6),
+                    precipitation: month >= 4 && month <= 9 ? 3.2 : 1.8,
+                    wind_speed: 4.2 + (Math.random() * 2),
+                    humidity: isSummer ? 75.3 : 65.3
+                }
+            };
+
+            this.currentResults = sampleResults;
+            this.displayResults(sampleResults);
+            
+        } catch (error) {
+            console.error('Analysis error:', error);
+            this.showError('Analysis failed. Please try again.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    generateRecommendations(probabilities, riskLevel) {
+        const recommendations = [];
+        
+        if (probabilities.rain && probabilities.rain > 20) {
+            recommendations.push('Rain likely - bring waterproof clothing and consider covered areas');
+        }
+        
+        if (probabilities.heavy_rain && probabilities.heavy_rain > 10) {
+            recommendations.push('Heavy rain possible - have indoor backup plans ready');
+        }
+        
+        if (probabilities.very_hot && probabilities.very_hot > 15) {
+            recommendations.push('High temperatures expected - ensure shade and hydration available');
+        }
+        
+        if (probabilities.very_cold && probabilities.very_cold > 10) {
+            recommendations.push('Cold conditions likely - provide warming areas and appropriate clothing');
+        }
+        
+        if (probabilities.high_wind && probabilities.high_wind > 25) {
+            recommendations.push('Strong winds possible - secure loose items and decorations');
+        }
+        
+        if (probabilities.high_humidity && probabilities.high_humidity > 35) {
+            recommendations.push('High humidity expected - ensure adequate ventilation');
+        }
+        
+        if (riskLevel === 'Low') {
+            recommendations.push('Generally favorable conditions for outdoor events');
+        } else if (riskLevel === 'High') {
+            recommendations.push('Consider postponing or moving event indoors');
+        }
+        
+        return recommendations.length > 0 ? recommendations : ['Conditions appear manageable for outdoor activities'];
+    }
+
+    displayResults(results) {
+        // Show results section
+        document.getElementById('results-section').classList.remove('hidden');
+        document.getElementById('results-section').classList.add('fade-in');
+
+        // Display probability cards
+        this.displayProbabilityCards(results.probabilities);
+
+        // Display risk assessment
+        this.displayRiskAssessment(results);
+
+        // Display historical context
+        this.displayHistoricalContext(results.historical_averages);
+
+        // Update charts
+        this.updateCharts(results.probabilities);
+
+        // Scroll to results
+        document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    displayProbabilityCards(probabilities) {
+        const grid = document.getElementById('probability-grid');
+        grid.innerHTML = '';
+
+        const parameterLabels = {
+            rain: 'Rain Probability',
+            heavy_rain: 'Heavy Rain Risk',
+            very_hot: 'Extreme Heat Risk',
+            very_cold: 'Extreme Cold Risk',
+            high_wind: 'High Wind Risk',
+            high_humidity: 'High Humidity Risk',
+            uncomfortable: 'Uncomfortable Conditions'
+        };
+
+        Object.entries(probabilities).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                const card = this.createProbabilityCard(parameterLabels[key], value);
+                grid.appendChild(card);
+            }
+        });
+    }
+
+    createProbabilityCard(label, probability) {
+        const card = document.createElement('div');
+        card.className = `probability-card ${this.getRiskClass(probability)}`;
+
+        card.innerHTML = `
+            <div class="probability-value">${probability}%</div>
+            <div class="probability-label">${label}</div>
+            <div class="probability-bar">
+                <div class="probability-fill ${this.getRiskClass(probability)}" style="width: ${probability}%"></div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    getRiskClass(probability) {
+        if (probability <= 15) return 'risk-low';
+        if (probability <= 30) return 'risk-moderate';
+        return 'risk-high';
+    }
+
+    displayRiskAssessment(results) {
+        document.getElementById('suitability-score').textContent = results.suitability_score;
+        
+        const riskLevelElement = document.getElementById('risk-level');
+        riskLevelElement.textContent = results.risk_level;
+        riskLevelElement.className = `risk-level ${results.risk_level.toLowerCase()}`;
+
+        const recommendationsList = document.getElementById('recommendations-list');
+        recommendationsList.innerHTML = '';
+        
+        results.recommendations.forEach(recommendation => {
+            const li = document.createElement('li');
+            li.textContent = recommendation;
+            recommendationsList.appendChild(li);
+        });
+    }
+
+    displayHistoricalContext(averages) {
+        const container = document.getElementById('historical-averages');
+        container.innerHTML = '';
+
+        const historicalData = [
+            { label: 'Avg Temp', value: `${averages.temperature.toFixed(1)}°C`, unit: '' },
+            { label: 'Max Temp', value: `${averages.max_temperature.toFixed(1)}°C`, unit: '' },
+            { label: 'Min Temp', value: `${averages.min_temperature.toFixed(1)}°C`, unit: '' },
+            { label: 'Precipitation', value: `${averages.precipitation.toFixed(1)}`, unit: 'mm' },
+            { label: 'Wind Speed', value: `${averages.wind_speed.toFixed(1)}`, unit: 'm/s' },
+            { label: 'Humidity', value: `${averages.humidity.toFixed(1)}`, unit: '%' }
+        ];
+
+        historicalData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'historical-item';
+            div.innerHTML = `
+                <span class="historical-value">${item.value}${item.unit}</span>
+                <span class="historical-label">${item.label}</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    updateCharts(probabilities) {
+        const ctx = document.getElementById('probability-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.probabilityChart) {
+            window.probabilityChart.destroy();
+        }
+
+        const labels = [];
+        const data = [];
+        const colors = [];
+
+        const parameterLabels = {
+            rain: 'Rain',
+            heavy_rain: 'Heavy Rain',
+            very_hot: 'Extreme Heat',
+            very_cold: 'Extreme Cold',
+            high_wind: 'High Wind',
+            high_humidity: 'High Humidity',
+            uncomfortable: 'Uncomfortable'
+        };
+
+        Object.entries(probabilities).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                labels.push(parameterLabels[key]);
+                data.push(value);
+                
+                // Color based on risk level
+                if (value <= 15) colors.push('#1FB8CD');
+                else if (value <= 30) colors.push('#FFC185');
+                else colors.push('#B4413C');
+            }
+        });
+
+        window.probabilityChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Probability (%)',
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `Weather Probability Analysis - ${this.selectedLocation ? this.selectedLocation.name : 'Selected Location'}`
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    exportData(format) {
+        if (!this.currentResults) {
+            this.showError('No data to export. Please run an analysis first.');
+            return;
+        }
+
+        let data, filename, mimeType;
+
+        if (format === 'csv') {
+            data = this.generateCSV();
+            filename = `weather-analysis-${this.selectedDate.toISOString().split('T')[0]}.csv`;
+            mimeType = 'text/csv';
+        } else if (format === 'json') {
+            data = JSON.stringify(this.currentResults, null, 2);
+            filename = `weather-analysis-${this.selectedDate.toISOString().split('T')[0]}.json`;
+            mimeType = 'application/json';
+        }
+
+        this.downloadFile(data, filename, mimeType);
+    }
+
+    generateCSV() {
+        const results = this.currentResults;
+        let csv = 'Parameter,Probability (%)\n';
+        
+        Object.entries(results.probabilities).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                csv += `${key.replace('_', ' ')},${value}\n`;
+            }
+        });
+
+        csv += '\nHistorical Averages\n';
+        csv += 'Metric,Value\n';
+        Object.entries(results.historical_averages).forEach(([key, value]) => {
+            csv += `${key.replace('_', ' ')},${value}\n`;
+        });
+
+        return csv;
+    }
+
+    downloadFile(data, filename, mimeType) {
+        const blob = new Blob([data], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    shareResults() {
+        if (!this.currentResults) {
+            this.showError('No results to share. Please run an analysis first.');
+            return;
+        }
+
+        const shareText = `Weather Analysis for ${this.selectedLocation.name} on ${this.selectedDate.toDateString()}\n` +
+                         `Suitability Score: ${this.currentResults.suitability_score}/100\n` +
+                         `Risk Level: ${this.currentResults.risk_level}\n` +
+                         `Generated by NASA Weather Probability Predictor`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'Weather Analysis Results',
+                text: shareText,
+                url: window.location.href
+            });
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(shareText).then(() => {
+                alert('Results copied to clipboard!');
+            }).catch(() => {
+                this.showError('Failed to copy results to clipboard.');
+            });
+        }
+    }
+
+    openCustomLocationModal() {
+        document.getElementById('custom-location-modal').classList.remove('hidden');
+    }
+
+    closeCustomLocationModal() {
+        document.getElementById('custom-location-modal').classList.add('hidden');
+        // Clear form
+        document.getElementById('custom-location-name').value = '';
+        document.getElementById('custom-lat').value = '';
+        document.getElementById('custom-lon').value = '';
+    }
+
+    saveCustomLocation() {
+        const name = document.getElementById('custom-location-name').value.trim();
+        const lat = parseFloat(document.getElementById('custom-lat').value);
+        const lon = parseFloat(document.getElementById('custom-lon').value);
+
+        if (!name || isNaN(lat) || isNaN(lon)) {
+            this.showError('Please fill in all fields with valid values.');
+            return;
+        }
+
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+            this.showError('Please enter valid coordinates (lat: -90 to 90, lon: -180 to 180).');
+            return;
+        }
+
+        const customLocation = { name, lat, lon };
+        this.selectedLocation = customLocation;
+        this.updateCoordinatesDisplay();
+        this.updateMapLocation(lat, lon);
+        
+        // Reset dropdown
+        document.getElementById('location-select').value = '';
+        
+        this.closeCustomLocationModal();
+    }
+}
+
+// Initialize the application when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new WeatherProbabilityApp();
+});
+
+// Add some utility functions for weather calculations
+function calculateProbability(data, threshold, operator = '>') {
+    if (!data || data.length === 0) return 0;
+    
+    let count = 0;
+    data.forEach(value => {
+        if (operator === '>' && value > threshold) count++;
+        else if (operator === '<' && value < threshold) count++;
+        else if (operator === '>=' && value >= threshold) count++;
+        else if (operator === '<=' && value <= threshold) count++;
+    });
+    
+    return Math.round((count / data.length) * 100);
+}
+
+function calculateStats(data) {
+    if (!data || data.length === 0) return { mean: 0, std: 0 };
+    
+    const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
+    const variance = data.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / data.length;
+    const std = Math.sqrt(variance);
+    
+    return { mean, std };
+}
+
+// Add keyboard navigation support
+document.addEventListener('keydown', (e) => {
+    // Close modal on Escape key
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('custom-location-modal');
+        if (!modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+        }
+    }
+    
+    // Quick analysis on Ctrl+Enter
+    if (e.ctrlKey && e.key === 'Enter') {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.click();
+        }
+    }
+});
