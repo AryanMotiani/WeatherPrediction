@@ -5,7 +5,9 @@ class WeatherProbabilityApp {
         this.locations = {
             'new-york': { name: 'New York, NY', lat: 40.7128, lon: -74.006 },
             'los-angeles': { name: 'Los Angeles, CA', lat: 34.0522, lon: -118.2437 },
-            'phoenix': { name: 'Phoenix, AZ', lat: 33.4484, lon: -112.074 }
+            'phoenix': { name: 'Phoenix, AZ', lat: 33.4484, lon: -112.074 },
+            'chicago': { name: 'Chicago, IL', lat: 41.8781, lon: -87.6298 },
+            'miami': { name: 'Miami, FL', lat: 25.7617, lon: -80.1918 }
         };
         
         this.selectedLocation = null;
@@ -15,7 +17,22 @@ class WeatherProbabilityApp {
         this.weatherData = null;
         this.currentResults = null;
         
+        // API configuration
+        this.apiBaseUrl = this.detectApiUrl();
+        this.requestCache = new Map();
+        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+        
         this.init();
+    }
+
+    detectApiUrl() {
+        // Try to detect if backend is running locally, otherwise use fallback
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:8000';
+        }
+        // For production, you would set your deployed backend URL here
+        return 'http://localhost:8000'; // Change this to your deployed backend URL
     }
 
     async init() {
@@ -125,19 +142,40 @@ class WeatherProbabilityApp {
 
     async loadWeatherData() {
         try {
-            const response = await fetch('https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/89de445a094070690ab97376a11c4876/40e16572-b54a-4fba-b793-74862e6d68a7/34ec2f12.json');
+            // Test backend connectivity
+            const healthResponse = await fetch(`${this.apiBaseUrl}/`);
+            if (healthResponse.ok) {
+                const healthData = await healthResponse.json();
+                console.log('Backend connected:', healthData.message);
+                this.backendAvailable = true;
+            } else {
+                throw new Error('Backend not available');
+            }
+        } catch (error) {
+            console.warn('Backend not available, using fallback mode:', error);
+            this.backendAvailable = false;
+            // Load fallback data and functions
+            await this.loadFallbackData();
+        }
+    }
+
+    async loadFallbackData() {
+        try {
+            const response = await fetch('weather_sample_data.json');
             this.weatherData = await response.json();
             
-            // Load probability calculation functions
-            const script = document.createElement('script');
-            script.src = 'https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/89de445a094070690ab97376a11c4876/2dffdd09-3906-47c8-90ef-d9c58c1b2b81/285f1197.js';
-            script.onload = () => {
-                console.log('Weather probability functions loaded');
-            };
-            document.head.appendChild(script);
+            // Load probability calculation functions for fallback
+            if (typeof calculateWeatherProbabilities === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'weather_probability_functions.js';
+                script.onload = () => {
+                    console.log('Fallback weather probability functions loaded');
+                };
+                document.head.appendChild(script);
+            }
         } catch (error) {
-            console.error('Error loading weather data:', error);
-            this.showError('Failed to load weather data. Please try again later.');
+            console.error('Error loading fallback weather data:', error);
+            this.showError('Failed to load weather data. Please check your internet connection.');
         }
     }
 
@@ -283,72 +321,143 @@ class WeatherProbabilityApp {
         this.showLoading();
 
         try {
-            // Simulate analysis with sample data for now
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            let results;
             
-            // Generate dynamic results based on selected location and date
-            const month = this.selectedDate.getMonth() + 1;
-            const isWinter = month === 12 || month === 1 || month === 2;
-            const isSummer = month === 6 || month === 7 || month === 8;
-            
-            // Adjust probabilities based on season and location
-            const baseProbabilities = {
-                rain: 25,
-                heavy_rain: 5,
-                very_hot: isSummer ? 25 : 5,
-                very_cold: isWinter ? 15 : 0,
-                high_wind: 20,
-                high_humidity: isSummer ? 40 : 25,
-                uncomfortable: isSummer ? 30 : (isWinter ? 20 : 15)
-            };
-            
-            // Add some randomness and location-specific adjustments
-            const locationMultiplier = this.selectedLocation.name.includes('Phoenix') ? 1.3 : 
-                                     this.selectedLocation.name.includes('Los Angeles') ? 0.8 : 1.0;
-            
-            const probabilities = {};
-            selectedParams.forEach(param => {
-                const baseValue = baseProbabilities[param] || 10;
-                const adjusted = Math.min(Math.round(baseValue * locationMultiplier + (Math.random() * 10 - 5)), 100);
-                probabilities[param] = Math.max(adjusted, 0);
-            });
-            
-            // Calculate suitability score
-            const avgProbability = Object.values(probabilities).reduce((sum, val) => sum + val, 0) / Object.values(probabilities).length;
-            const suitabilityScore = Math.max(10, Math.min(100, Math.round(100 - avgProbability * 1.5)));
-            
-            const riskLevel = avgProbability <= 15 ? 'Low' : avgProbability <= 30 ? 'Moderate' : 'High';
-            
-            const sampleResults = {
-                location: this.selectedLocation.name,
-                date: this.selectedDate.toISOString().split('T')[0],
-                coordinates: {
-                    lat: this.selectedLocation.lat,
-                    lon: this.selectedLocation.lon
-                },
-                probabilities: probabilities,
-                suitability_score: suitabilityScore,
-                risk_level: riskLevel,
-                recommendations: this.generateRecommendations(probabilities, riskLevel),
-                historical_averages: {
-                    temperature: isSummer ? 28.5 : (isWinter ? 5.2 : 18.3),
-                    max_temperature: isSummer ? 35.1 : (isWinter ? 10.8 : 24.8),
-                    min_temperature: isSummer ? 21.9 : (isWinter ? -0.4 : 11.6),
-                    precipitation: month >= 4 && month <= 9 ? 3.2 : 1.8,
-                    wind_speed: 4.2 + (Math.random() * 2),
-                    humidity: isSummer ? 75.3 : 65.3
-                }
-            };
+            if (this.backendAvailable) {
+                // Use real NASA data via backend API
+                results = await this.analyzeWithNASAData();
+            } else {
+                // Use fallback sample data
+                results = await this.analyzeWithFallbackData();
+            }
 
-            this.currentResults = sampleResults;
-            this.displayResults(sampleResults);
+            this.currentResults = results;
+            this.displayResults(results);
             
         } catch (error) {
             console.error('Analysis error:', error);
-            this.showError('Analysis failed. Please try again.');
+            this.showError(`Analysis failed: ${error.message}`);
         } finally {
             this.hideLoading();
         }
+    }
+
+    async analyzeWithNASAData() {
+        const dateString = this.selectedDate.toISOString().split('T')[0];
+        const cacheKey = `${this.selectedLocation.lat}_${this.selectedLocation.lon}_${dateString}`;
+        
+        // Check cache first
+        if (this.requestCache.has(cacheKey)) {
+            const cached = this.requestCache.get(cacheKey);
+            if (Date.now() - cached.timestamp < this.cacheTimeout) {
+                console.log('Using cached NASA data');
+                return cached.data;
+            }
+        }
+
+        const url = `${this.apiBaseUrl}/api/v1/weather/analyze?` + 
+                   `latitude=${this.selectedLocation.lat}&` +
+                   `longitude=${this.selectedLocation.lon}&` +
+                   `date=${dateString}&` +
+                   `baseline_years=20`;
+
+        console.log('Fetching NASA data from:', url);
+
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `API request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Transform API response to match frontend expectations
+        const results = this.transformNASAResponse(data);
+        
+        // Cache the results
+        this.requestCache.set(cacheKey, {
+            data: results,
+            timestamp: Date.now()
+        });
+
+        return results;
+    }
+
+    transformNASAResponse(apiData) {
+        return {
+            location: this.selectedLocation.name,
+            date: apiData.date,
+            coordinates: {
+                lat: apiData.location.latitude,
+                lon: apiData.location.longitude
+            },
+            probabilities: apiData.probabilities,
+            suitability_score: apiData.risk_assessment.suitability_score,
+            risk_level: apiData.risk_assessment.overall_risk,
+            recommendations: apiData.risk_assessment.recommendations,
+            historical_averages: apiData.historical_averages,
+            thresholds: apiData.thresholds,
+            metadata: apiData.metadata,
+            data_source: 'NASA POWER (Live Data)'
+        };
+    }
+
+    async analyzeWithFallbackData() {
+        // Simulate processing time
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Generate results based on sample data (existing logic)
+        const month = this.selectedDate.getMonth() + 1;
+        const isWinter = month === 12 || month === 1 || month === 2;
+        const isSummer = month === 6 || month === 7 || month === 8;
+        
+        const baseProbabilities = {
+            rain: 25,
+            heavy_rain: 5,
+            very_hot: isSummer ? 25 : 5,
+            very_cold: isWinter ? 15 : 0,
+            high_wind: 20,
+            high_humidity: isSummer ? 40 : 25,
+            uncomfortable: isSummer ? 30 : (isWinter ? 20 : 15)
+        };
+        
+        const locationMultiplier = this.selectedLocation.name.includes('Phoenix') ? 1.3 : 
+                                 this.selectedLocation.name.includes('Los Angeles') ? 0.8 : 1.0;
+        
+        const probabilities = {};
+        const selectedParams = this.getSelectedParameters();
+        selectedParams.forEach(param => {
+            const baseValue = baseProbabilities[param] || 10;
+            const adjusted = Math.min(Math.round(baseValue * locationMultiplier + (Math.random() * 10 - 5)), 100);
+            probabilities[param] = Math.max(adjusted, 0);
+        });
+        
+        const avgProbability = Object.values(probabilities).reduce((sum, val) => sum + val, 0) / Object.values(probabilities).length;
+        const suitabilityScore = Math.max(10, Math.min(100, Math.round(100 - avgProbability * 1.5)));
+        const riskLevel = avgProbability <= 15 ? 'Low' : avgProbability <= 30 ? 'Moderate' : 'High';
+        
+        return {
+            location: this.selectedLocation.name,
+            date: this.selectedDate.toISOString().split('T')[0],
+            coordinates: {
+                lat: this.selectedLocation.lat,
+                lon: this.selectedLocation.lon
+            },
+            probabilities: probabilities,
+            suitability_score: suitabilityScore,
+            risk_level: riskLevel,
+            recommendations: this.generateRecommendations(probabilities, riskLevel),
+            historical_averages: {
+                temperature: isSummer ? 28.5 : (isWinter ? 5.2 : 18.3),
+                max_temperature: isSummer ? 35.1 : (isWinter ? 10.8 : 24.8),
+                min_temperature: isSummer ? 21.9 : (isWinter ? -0.4 : 11.6),
+                precipitation: month >= 4 && month <= 9 ? 3.2 : 1.8,
+                wind_speed: 4.2 + (Math.random() * 2),
+                humidity: isSummer ? 75.3 : 65.3
+            },
+            data_source: 'Sample Data (Fallback Mode)'
+        };
     }
 
     generateRecommendations(probabilities, riskLevel) {
@@ -392,6 +501,9 @@ class WeatherProbabilityApp {
         document.getElementById('results-section').classList.remove('hidden');
         document.getElementById('results-section').classList.add('fade-in');
 
+        // Display data source indicator
+        this.displayDataSourceInfo(results);
+
         // Display probability cards
         this.displayProbabilityCards(results.probabilities);
 
@@ -406,6 +518,32 @@ class WeatherProbabilityApp {
 
         // Scroll to results
         document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    displayDataSourceInfo(results) {
+        // Add data source indicator to the results
+        let dataSourceElement = document.getElementById('data-source-info');
+        if (!dataSourceElement) {
+            dataSourceElement = document.createElement('div');
+            dataSourceElement.id = 'data-source-info';
+            dataSourceElement.className = 'data-source-info';
+            
+            const resultsSection = document.getElementById('results-section');
+            resultsSection.insertBefore(dataSourceElement, resultsSection.firstChild);
+        }
+
+        const isLiveData = results.data_source && results.data_source.includes('NASA POWER');
+        const sourceIcon = isLiveData ? '🛰️' : '📊';
+        const sourceText = isLiveData ? 'Live NASA POWER Data' : 'Sample Data (Demo Mode)';
+        const sourceClass = isLiveData ? 'live-data' : 'sample-data';
+
+        dataSourceElement.innerHTML = `
+            <div class="data-source-badge ${sourceClass}">
+                <span class="source-icon">${sourceIcon}</span>
+                <span class="source-text">${sourceText}</span>
+                ${results.metadata ? `<span class="source-details">• ${results.metadata.total_years} years • ${results.metadata.total_records} records</span>` : ''}
+            </div>
+        `;
     }
 
     displayProbabilityCards(probabilities) {
