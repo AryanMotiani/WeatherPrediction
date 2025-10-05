@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Will It Rain On My Parade? - NASA Weather Probability Predictor</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1 class="header-title">Will It Rain On My Parade?</h1>
+                    <h2 class="header-subtitle">NASA Weather Probability Predictor</h2>
+                    <p class="header-description">Plan your outdoor events with confidence using NASA Earth observation data</p>
+                </div>
+                <div class="nasa-branding">
+                    <div class="nasa-logo">NASA Space Apps Challenge 2025</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- Travel Mode Toggle -->
+                <div class="panel travel-mode-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">🚗 Travel Mode</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="travel-toggle">
+                            <label class="travel-toggle-label">
+                                <input type="checkbox" id="travel-mode-toggle" class="travel-toggle-input">
+                                <span class="travel-toggle-slider"></span>
+                                <span class="travel-toggle-text">Are you traveling?</span>
+                            </label>
+                        </div>
+                        <div id="travel-mode-info" class="travel-mode-info hidden">
+                            <p>Travel mode will analyze weather and air quality along your route between two locations.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Location Input Panel -->
+                <div class="panel location-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">📍 Select Location</h3>
+                    </div>
+                    <div class="panel-body">
+                        <!-- Single Location Mode -->
+                        <div id="single-location-mode">
+                            <div class="form-group">
+                                <label for="location-select" class="form-label">Choose a city:</label>
+                                <select id="location-select" class="form-control">
+                                    <option value="">Select a location...</option>
+                                    <option value="new-york">New York, NY</option>
+                                    <option value="los-angeles">Los Angeles, CA</option>
+                                    <option value="phoenix">Phoenix, AZ</option>
+                                </select>
+                            </div>
+                            
+                            <div class="coordinates-display">
+                                <div class="coordinate-item">
+                                    <span class="coordinate-label">Latitude:</span>
+                                    <span id="lat-display">--</span>
+                                </div>
+                                <div class="coordinate-item">
+                                    <span class="coordinate-label">Longitude:</span>
+                                    <span id="lon-display">--</span>
+                                </div>
+                            </div>
+
+                            <div class="map-container">
+                                <div id="map" class="map"></div>
+                            </div>
+
+                            <button class="btn btn--secondary btn--sm" id="custom-location-btn">
+                                Add Custom Location
+                            </button>
+                        </div>
+
+                        <!-- Travel Mode -->
+                        <div id="travel-location-mode" class="hidden">
+                            <div class="travel-locations">
+                                <div class="form-group">
+                                    <label for="start-location-select" class="form-label">Starting Location:</label>
+                                    <select id="start-location-select" class="form-control">
+                                        <option value="">Select starting location...</option>
+                                        <option value="new-york">New York, NY</option>
+                                        <option value="los-angeles">Los Angeles, CA</option>
+                                        <option value="phoenix">Phoenix, AZ</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="end-location-select" class="form-label">Destination:</label>
+                                    <select id="end-location-select" class="form-control">
+                                        <option value="">Select destination...</option>
+                                        <option value="new-york">New York, NY</option>
+                                        <option value="los-angeles">Los Angeles, CA</option>
+                                        <option value="phoenix">Phoenix, AZ</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="travel-coordinates">
+                                <div class="travel-coord-group">
+                                    <h4>Starting Point</h4>
+                                    <div class="coordinate-item">
+                                        <span class="coordinate-label">Latitude:</span>
+                                        <span id="start-lat-display">--</span>
+                                    </div>
+                                    <div class="coordinate-item">
+                                        <span class="coordinate-label">Longitude:</span>
+                                        <span id="start-lon-display">--</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="travel-coord-group">
+                                    <h4>Destination</h4>
+                                    <div class="coordinate-item">
+                                        <span class="coordinate-label">Latitude:</span>
+                                        <span id="end-lat-display">--</span>
+                                    </div>
+                                    <div class="coordinate-item">
+                                        <span class="coordinate-label">Longitude:</span>
+                                        <span id="end-lon-display">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="map-container">
+                                <div id="travel-map" class="map"></div>
+                            </div>
+
+                            <div class="travel-distance">
+                                <span class="distance-label">Route Distance:</span>
+                                <span id="route-distance">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Selection Panel -->
+                <div class="panel date-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">📅 Select Event Date</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label for="date-input" class="form-label">Event Date:</label>
+                            <input type="date" id="date-input" class="form-control">
+                        </div>
+                        
+                        <div class="quick-dates">
+                            <h4>Quick Select:</h4>
+                            <div class="quick-date-buttons">
+                                <button class="btn btn--outline btn--sm" data-days="7">Next Week</button>
+                                <button class="btn btn--outline btn--sm" data-days="14">2 Weeks</button>
+                                <button class="btn btn--outline btn--sm" data-days="30">Next Month</button>
+                            </div>
+                        </div>
+
+                        <div class="date-info">
+                            <div class="date-item">
+                                <span class="date-label">Month/Day:</span>
+                                <span id="month-day-display">--/--</span>
+                            </div>
+                            <div class="date-item">
+                                <span class="date-label">Day of Year:</span>
+                                <span id="day-of-year-display">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weather Parameters Panel -->
+                <div class="panel parameters-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">🌤️ Weather Parameters</h3>
+                        <div class="parameter-controls">
+                            <button class="btn btn--outline btn--sm" id="select-all-params">Select All</button>
+                            <button class="btn btn--outline btn--sm" id="clear-all-params">Clear All</button>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="parameter-grid">
+                            <label class="parameter-item" title="Probability of measurable precipitation (>1.0 mm/day)">
+                                <input type="checkbox" name="weather-param" value="rain" checked>
+                                <span class="parameter-label">Rain Probability</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Risk of significant rainfall that could disrupt outdoor activities (>10.0 mm/day)">
+                                <input type="checkbox" name="weather-param" value="heavy_rain" checked>
+                                <span class="parameter-label">Heavy Rain Risk</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Extremely high temperatures that could be dangerous">
+                                <input type="checkbox" name="weather-param" value="very_hot" checked>
+                                <span class="parameter-label">Extreme Heat Risk</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Very low temperatures requiring warm clothing">
+                                <input type="checkbox" name="weather-param" value="very_cold" checked>
+                                <span class="parameter-label">Extreme Cold Risk</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Strong winds that could affect outdoor setups">
+                                <input type="checkbox" name="weather-param" value="high_wind" checked>
+                                <span class="parameter-label">High Wind Risk</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Uncomfortably humid conditions (>80%)">
+                                <input type="checkbox" name="weather-param" value="high_humidity" checked>
+                                <span class="parameter-label">High Humidity Risk</span>
+                            </label>
+                            
+                            <label class="parameter-item" title="Overall uncomfortable weather conditions">
+                                <input type="checkbox" name="weather-param" value="uncomfortable" checked>
+                                <span class="parameter-label">Uncomfortable Conditions</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Button -->
+                <div class="panel analysis-trigger">
+                    <button class="btn btn--primary btn--lg btn--full-width" id="analyze-btn">
+                        🔍 Analyze Weather Probability
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="results-section hidden">
+                
+                <!-- Probability Dashboard -->
+                <div class="panel probability-dashboard">
+                    <div class="panel-header">
+                        <h3 class="panel-title">📊 Probability Results</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="probability-grid" class="probability-grid">
+                            <!-- Dynamic probability cards will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AQI Panel -->
+                <div class="panel aqi-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">🌬️ Air Quality Index</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="aqi-display" class="aqi-display">
+                            <div class="aqi-main">
+                                <div class="aqi-value" id="aqi-value">--</div>
+                                <div class="aqi-category" id="aqi-category">--</div>
+                            </div>
+                            <div class="aqi-details" id="aqi-details">
+                                <!-- AQI pollutant details will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Assessment Panel -->
+                <div class="panel risk-assessment">
+                    <div class="panel-header">
+                        <h3 class="panel-title">⚡ Risk Assessment</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="suitability-score">
+                            <div class="score-display">
+                                <span class="score-value" id="suitability-score">--</span>
+                                <span class="score-label">Suitability Score</span>
+                            </div>
+                            <div class="risk-indicator">
+                                <span class="risk-level" id="risk-level">--</span>
+                            </div>
+                        </div>
+                        
+                        <div class="recommendations">
+                            <h4>Recommendations:</h4>
+                            <ul id="recommendations-list">
+                                <!-- Dynamic recommendations will be inserted here -->
+                            </ul>
+                        </div>
+
+                        <div class="historical-context">
+                            <h4>Historical Context:</h4>
+                            <div id="historical-averages" class="historical-data">
+                                <!-- Historical data will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts and Visualizations -->
+                <div class="panel charts-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">📈 Data Visualization</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="chart-container" style="position: relative; height: 400px;">
+                            <canvas id="probability-chart"></canvas>
+                        </div>
+                        
+                        <div class="pregenerated-chart">
+                            <h4>Sample Analysis - July 4th, New York</h4>
+                            <img src="https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/89de445a094070690ab97376a11c4876/eb5926ee-166f-4096-a13e-df870bf374f1/5dd54f05.png" 
+                                 alt="Weather probability analysis chart" 
+                                 class="sample-chart">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Travel Results Section -->
+                <div id="travel-results-section" class="travel-results-section hidden">
+                    <div class="panel travel-summary">
+                        <div class="panel-header">
+                            <h3 class="panel-title">🗺️ Travel Route Analysis</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="travel-summary-content">
+                                <div class="route-info">
+                                    <div class="route-distance">
+                                        <span class="distance-label">Total Distance:</span>
+                                        <span id="travel-distance">--</span>
+                                    </div>
+                                    <div class="travel-summary-text" id="travel-summary-text">
+                                        <!-- Travel summary will be inserted here -->
+                                    </div>
+                                </div>
+                                
+                                <div class="route-points" id="route-points">
+                                    <!-- Route points will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Export Section -->
+                <div class="panel export-panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">💾 Export Data</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="export-buttons">
+                            <button class="btn btn--secondary" id="export-csv">
+                                📄 Download CSV
+                            </button>
+                            <button class="btn btn--secondary" id="export-json">
+                                📋 Download JSON
+                            </button>
+                            <button class="btn btn--secondary" id="export-travel-csv">
+                                🗺️ Download Travel CSV
+                            </button>
+                            <button class="btn btn--outline" id="share-results">
+                                🔗 Share Results
+                            </button>
+                        </div>
+                        
+                        <div class="export-info">
+                            <p>Export includes probability data, historical averages, AQI data, and recommendations for your selected location and date.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Analyzing weather data...</p>
+        </div>
+    </div>
+
+    <!-- Modal for Custom Location -->
+    <div id="custom-location-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Custom Location</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Location Name:</label>
+                    <input type="text" id="custom-location-name" class="form-control" placeholder="Enter location name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Latitude:</label>
+                    <input type="number" id="custom-lat" class="form-control" step="0.0001" placeholder="40.7128">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Longitude:</label>
+                    <input type="number" id="custom-lon" class="form-control" step="0.0001" placeholder="-74.0060">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn--outline" id="modal-cancel">Cancel</button>
+                <button class="btn btn--primary" id="modal-save">Add Location</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
