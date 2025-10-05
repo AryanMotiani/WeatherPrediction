@@ -1,0 +1,44 @@
+{
+  "model_info": {
+    "algorithm": "Random Forest + Gradient Boosting Ensemble",
+    "features_used": [
+      "temperature_lag1",
+      "temperature_lag2",
+      "humidity_lag1",
+      "pressure_lag1",
+      "hour",
+      "day_of_year",
+      "seasonal_factor",
+      "daily_factor",
+      "interaction_features"
+    ],
+    "accuracy_metrics": {
+      "temperature": {
+        "mae": 2.5,
+        "rmse": 3.1,
+        "r2": 0.73
+      },
+      "humidity": {
+        "mae": 8.8,
+        "rmse": 11.1,
+        "r2": 0.29
+      },
+      "uv_index": {
+        "mae": 1.2,
+        "rmse": 1.5,
+        "r2": 0.66
+      }
+    }
+  },
+  "sample_predictions": {
+    "temperature": 22.3,
+    "humidity": 65.2,
+    "pressure": 1015.8,
+    "wind_speed": 12.1,
+    "precipitation": 0.8,
+    "cloud_cover": 35.6,
+    "uv_index": 6.2,
+    "aqi": 48.9,
+    "suitability_score": 78
+  }
+}

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pseudo Force - Revolutionary Weather Prediction | NASA Space Apps 2025</title>
+    <meta name="description" content="Revolutionary weather prediction application by Team Pseudo Force for NASA Space Apps Challenge 2025">
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Startup Screen -->
+    <div id="startupScreen" class="startup-screen">
+        <div class="startup-content">
+            <div class="orbital-logo">
+                <div class="orbit orbit-1">
+                    <div class="satellite sat-1">🛰️</div>
+                </div>
+                <div class="orbit orbit-2">
+                    <div class="satellite sat-2">🌡️</div>
+                </div>
+                <div class="orbit orbit-3">
+                    <div class="satellite sat-3">⛈️</div>
+                </div>
+                <div class="center-logo">🌍</div>
+            </div>
+            
+            <h1 class="team-name">PSEUDO FORCE</h1>
+            <p class="tagline">NASA Space Apps Challenge 2025</p>
+            
+            <div class="loading-container">
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p class="loading-text">Initializing weather prediction system...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="main-app hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="container">
+                <div class="header-content">
+                    <div class="logo-section">
+                        <span class="logo">🌍</span>
+                        <h2 class="app-title">Weather Prediction</h2>
+                    </div>
+                    <div class="header-controls">
+                        <button id="themeToggle" class="btn btn--outline btn--sm">
+                            <span class="theme-icon">🌙</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Step Navigation -->
+        <div class="step-nav">
+            <div class="container">
+                <div class="steps">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <span>Weather Preset</span>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <span>Mode Selection</span>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="step-number">3</div>
+                        <span>Location</span>
+                    </div>
+                    <div class="step" data-step="4">
+                        <div class="step-number">4</div>
+                        <span>Date</span>
+                    </div>
+                    <div class="step" data-step="5">
+                        <div class="step-number">5</div>
+                        <span>Results</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Weather Presets -->
+        <section id="step1" class="step-section active">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Choose Your Perfect Weather</h2>
+                    <p class="section-description">Select from our expertly crafted weather presets or create your own custom conditions</p>
+                </div>
+
+                <div class="presets-grid">
+                    <div class="preset-card" data-preset="beach">
+                        <div class="preset-icon">🏖️</div>
+                        <h3 class="preset-name">Perfect Beach Day</h3>
+                        <p class="preset-description">Warm, sunny with gentle breeze</p>
+                        <div class="preset-details">
+                            <span class="detail">25-32°C</span>
+                            <span class="detail">< 15km/h wind</span>
+                            <span class="detail">Sunny</span>
+                        </div>
+                    </div>
+
+                    <div class="preset-card" data-preset="hiking">
+                        <div class="preset-icon">🥾</div>
+                        <h3 class="preset-name">Ideal Hiking Weather</h3>
+                        <p class="preset-description">Cool, clear with low humidity</p>
+                        <div class="preset-details">
+                            <span class="detail">15-25°C</span>
+                            <span class="detail">< 25km/h wind</span>
+                            <span class="detail">Clear</span>
+                        </div>
+                    </div>
+
+                    <div class="preset-card" data-preset="ski">
+                        <div class="preset-icon">⛷️</div>
+                        <h3 class="preset-name">Prime Ski Conditions</h3>
+                        <p class="preset-description">Cold, snowy with good visibility</p>
+                        <div class="preset-details">
+                            <span class="detail">-10 to 5°C</span>
+                            <span class="detail">Fresh snow</span>
+                            <span class="detail">Good visibility</span>
+                        </div>
+                    </div>
+
+                    <div class="preset-card" data-preset="photography">
+                        <div class="preset-icon">📷</div>
+                        <h3 class="preset-name">Perfect Photography</h3>
+                        <p class="preset-description">Golden hour with dramatic clouds</p>
+                        <div class="preset-details">
+                            <span class="detail">10-30°C</span>
+                            <span class="detail">Golden hour</span>
+                            <span class="detail">40-70% clouds</span>
+                        </div>
+                    </div>
+
+                    <div class="preset-card" data-preset="stargazing">
+                        <div class="preset-icon">🌟</div>
+                        <h3 class="preset-name">Stargazing Paradise</h3>
+                        <p class="preset-description">Clear skies, low humidity</p>
+                        <div class="preset-details">
+                            <span class="detail">5-25°C</span>
+                            <span class="detail">< 10% clouds</span>
+                            <span class="detail">Clear skies</span>
+                        </div>
+                    </div>
+
+                    <div class="preset-card custom" data-preset="custom">
+                        <div class="preset-icon">⚙️</div>
+                        <h3 class="preset-name">Custom Preset</h3>
+                        <p class="preset-description">Define your own perfect conditions</p>
+                        <div class="preset-details">
+                            <span class="detail">Your parameters</span>
+                            <span class="detail">Custom ranges</span>
+                            <span class="detail">Personalized</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Preset Builder -->
+                <div id="customBuilder" class="custom-builder hidden">
+                    <div class="builder-header">
+                        <h3>Build Your Custom Weather Preset</h3>
+                        <p>Adjust the parameters below to define your ideal weather conditions</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Preset Name</label>
+                        <input type="text" id="customName" class="form-control" placeholder="My Perfect Weather">
+                    </div>
+
+                    <div class="builder-controls">
+                        <div class="control-group">
+                            <label class="form-label">Temperature Range (°C)</label>
+                            <div class="range-input">
+                                <input type="range" id="tempMin" min="-20" max="50" value="20" class="slider">
+                                <input type="range" id="tempMax" min="-20" max="50" value="25" class="slider">
+                            </div>
+                            <div class="range-display">
+                                <span id="tempMinVal">20</span>°C - <span id="tempMaxVal">25</span>°C
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="form-label">Wind Speed (km/h)</label>
+                            <div class="range-input">
+                                <input type="range" id="windMax" min="0" max="100" value="15" class="slider">
+                            </div>
+                            <div class="range-display">
+                                < <span id="windMaxVal">15</span> km/h
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="form-label">Humidity (%)</label>
+                            <div class="range-input">
+                                <input type="range" id="humidity" min="0" max="100" value="60" class="slider">
+                            </div>
+                            <div class="range-display">
+                                < <span id="humidityVal">60</span>%
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="form-label">Cloud Cover (%)</label>
+                            <div class="range-input">
+                                <input type="range" id="clouds" min="0" max="100" value="30" class="slider">
+                            </div>
+                            <div class="range-display">
+                                < <span id="cloudsVal">30</span>%
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="form-label">Precipitation (mm)</label>
+                            <div class="range-input">
+                                <input type="range" id="precip" min="0" max="50" value="2" class="slider">
+                            </div>
+                            <div class="range-display">
+                                < <span id="precipVal">2</span> mm
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button id="nextStep1" class="btn btn--primary btn--lg">Continue</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Mode Selection -->
+        <section id="step2" class="step-section hidden">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Choose Analysis Mode</h2>
+                    <p class="section-description">Select how you want to analyze weather conditions</p>
+                </div>
+
+                <div class="mode-selection">
+                    <div class="mode-card" data-mode="travel">
+                        <div class="mode-icon">🛣️</div>
+                        <h3 class="mode-name">Travel Mode</h3>
+                        <p class="mode-description">Analyze weather conditions along your entire route from start to destination</p>
+                        <ul class="mode-features">
+                            <li>Route-based analysis</li>
+                            <li>Weather variations along path</li>
+                            <li>Best travel timing</li>
+                            <li>Health conditions en route</li>
+                        </ul>
+                    </div>
+
+                    <div class="mode-card" data-mode="destination">
+                        <div class="mode-icon">📍</div>
+                        <h3 class="mode-name">Destination Mode</h3>
+                        <p class="mode-description">Focus on weather conditions at a specific location</p>
+                        <ul class="mode-features">
+                            <li>Point-specific analysis</li>
+                            <li>Detailed local conditions</li>
+                            <li>Perfect timing recommendations</li>
+                            <li>Local health risk assessment</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button id="prevStep2" class="btn btn--outline">Back</button>
+                    <button id="nextStep2" class="btn btn--primary btn--lg">Continue</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Location Selection -->
+        <section id="step3" class="step-section hidden">
+            <div class="container">
+                <div class="section-header">
+                    <h2 id="locationHeader">Select Location</h2>
+                    <p class="section-description">Use the map below to select your location(s)</p>
+                </div>
+
+                <div class="location-controls">
+                    <!-- Destination Mode Search -->
+                    <div id="destinationSearchContainer" class="search-container">
+                        <input type="text" id="locationSearch" class="form-control" placeholder="Search for destination location...">
+                        <button id="searchBtn" class="btn btn--outline">Search</button>
+                    </div>
+                    
+                    <!-- Travel Mode Search Boxes -->
+                    <div id="travelSearchContainer" class="travel-search-container hidden">
+                        <div class="search-box">
+                            <label class="form-label">Start Location</label>
+                            <div class="search-input-group">
+                                <input type="text" id="startLocationSearch" class="form-control" placeholder="Enter start location...">
+                                <button id="searchStartBtn" class="btn btn--outline">Search</button>
+                            </div>
+                        </div>
+                        <div class="search-box">
+                            <label class="form-label">Destination Location</label>
+                            <div class="search-input-group">
+                                <input type="text" id="destLocationSearch" class="form-control" placeholder="Enter destination location...">
+                                <button id="searchDestBtn" class="btn btn--outline">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+
+                <div class="selected-locations">
+                    <div id="startLocation" class="location-info hidden">
+                        <h4>Start Location</h4>
+                        <p class="location-text"></p>
+                        <p class="location-coords"></p>
+                    </div>
+                    <div id="destLocation" class="location-info hidden">
+                        <h4>Destination</h4>
+                        <p class="location-text"></p>
+                        <p class="location-coords"></p>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button id="prevStep3" class="btn btn--outline">Back</button>
+                    <button id="nextStep3" class="btn btn--primary btn--lg">Continue</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Date Selection -->
+        <section id="step4" class="step-section hidden">
+            <div class="container">
+                <div class="section-header">
+                    <h2 id="dateHeader">Select Date</h2>
+                    <p class="section-description">Choose when you want to experience these weather conditions</p>
+                </div>
+
+                <div class="date-selection">
+                    <div id="singleDatePicker" class="date-picker">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" id="targetDate" class="form-control">
+                    </div>
+
+                    <div id="rangeDatePicker" class="date-picker hidden">
+                        <div class="date-range">
+                            <div class="date-input">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" id="startDate" class="form-control">
+                            </div>
+                            <div class="date-input">
+                                <label class="form-label">End Date</label>
+                                <input type="date" id="endDate" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button id="prevStep4" class="btn btn--outline">Back</button>
+                    <button id="analyzeWeather" class="btn btn--primary btn--lg">Analyze Weather</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Processing Screen -->
+        <section id="processingScreen" class="processing-screen hidden">
+            <div class="container">
+                <div class="processing-content">
+                    <div class="processing-animation">
+                        <div class="weather-particles">
+                            <div class="particle">🌧️</div>
+                            <div class="particle">☀️</div>
+                            <div class="particle">❄️</div>
+                            <div class="particle">🌪️</div>
+                            <div class="particle">⛈️</div>
+                        </div>
+                        <div class="processing-logo">🛰️</div>
+                    </div>
+                    
+                    <h2 class="processing-title">Analyzing Weather Patterns</h2>
+                    <p class="processing-message">Connecting to NASA satellites...</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <span class="progress-text">0%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 5: Results -->
+        <section id="step5" class="step-section hidden">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Weather Analysis Results</h2>
+                    <p class="section-description">Based on NASA satellite data and AI analysis</p>
+                </div>
+
+                <!-- Probability Results Section -->
+                <section class="probability-section">
+                    <h3 class="section-title">📊 Probability Results</h3>
+                    <div class="probability-grid">
+                        <div class="probability-card" data-type="rain">
+                            <div class="probability-icon">🌧️</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">Rain Probability</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="heavy-rain">
+                            <div class="probability-icon">⛈️</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">Heavy Rain Risk</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="extreme-heat">
+                            <div class="probability-icon">🔥</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">Extreme Heat Risk</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="extreme-cold">
+                            <div class="probability-icon">❄️</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">Extreme Cold Risk</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="high-wind">
+                            <div class="probability-icon">💨</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">High Wind Risk</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="high-humidity">
+                            <div class="probability-icon">💧</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">High Humidity Risk</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-card" data-type="uncomfortable">
+                            <div class="probability-icon">😣</div>
+                            <div class="probability-value">--</div>
+                            <div class="probability-label">Uncomfortable Conditions</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Risk Assessment and Score Section -->
+                <section class="risk-assessment-section">
+                    <h3 class="section-title">🛡️ Risk Assessment and Score</h3>
+                    <div class="risk-assessment-container">
+                        <div class="suitability-score">
+                            <div class="score-circle">
+                                <div class="score-value" id="suitabilityScore">--</div>
+                                <div class="score-label">Suitability Score</div>
+                            </div>
+                        </div>
+                        <div class="risk-classification">
+                            <div class="risk-level" id="riskLevel">
+                                <div class="risk-indicator"></div>
+                                <div class="risk-text">Calculating...</div>
+                            </div>
+                            <div class="risk-description" id="riskDescription">
+                                Analyzing weather conditions and calculating overall risk level...
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Health Data Section -->
+                <section class="health-section">
+                    <h3 class="section-title">🏥 Air Quality & Health Data</h3>
+                    <div class="health-grid">
+                        <div class="health-card" data-type="aqi">
+                            <div class="health-icon">🏭</div>
+                            <div class="health-value" id="aqiValue">--</div>
+                            <div class="health-label">AQI</div>
+                            <div class="health-status" id="aqiStatus">Loading...</div>
+                        </div>
+                        
+                        <div class="health-card" data-type="pm25">
+                            <div class="health-icon">🫁</div>
+                            <div class="health-value" id="pm25Value">--</div>
+                            <div class="health-label">PM2.5</div>
+                            <div class="health-status" id="pm25Status">Loading...</div>
+                        </div>
+                        
+                        <div class="health-card" data-type="pm10">
+                            <div class="health-icon">🌫️</div>
+                            <div class="health-value" id="pm10Value">--</div>
+                            <div class="health-label">PM10</div>
+                            <div class="health-status" id="pm10Status">Loading...</div>
+                        </div>
+                        
+                        <div class="health-card" data-type="no2">
+                            <div class="health-icon">🚗</div>
+                            <div class="health-value" id="no2Value">--</div>
+                            <div class="health-label">NO2</div>
+                            <div class="health-status" id="no2Status">Loading...</div>
+                        </div>
+                        
+                        <div class="health-card" data-type="o3">
+                            <div class="health-icon">☀️</div>
+                            <div class="health-value" id="o3Value">--</div>
+                            <div class="health-label">O3</div>
+                            <div class="health-status" id="o3Status">Loading...</div>
+                        </div>
+                        
+                        <div class="health-card" data-type="so2">
+                            <div class="health-icon">🏭</div>
+                            <div class="health-value" id="so2Value">--</div>
+                            <div class="health-label">SO2</div>
+                            <div class="health-status" id="so2Status">Loading...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Traditional Metrics Grid -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">🌡️</div>
+                        <div class="metric-content">
+                            <h3>Temperature</h3>
+                            <div class="metric-value" id="tempResult">--°C</div>
+                            <div class="metric-probability">-- % match</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">🌧️</div>
+                        <div class="metric-content">
+                            <h3>Precipitation</h3>
+                            <div class="metric-value" id="precipResult">-- mm</div>
+                            <div class="metric-probability">-- % match</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">💨</div>
+                        <div class="metric-content">
+                            <h3>Wind Speed</h3>
+                            <div class="metric-value" id="windResult">-- km/h</div>
+                            <div class="metric-probability">-- % match</div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon">☁️</div>
+                        <div class="metric-content">
+                            <h3>Cloud Cover</h3>
+                            <div class="metric-value" id="cloudResult">-- %</div>
+                            <div class="metric-probability">-- % match</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="charts-section">
+                    <div class="chart-container">
+                        <h3>Temperature Trends</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="tempChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Precipitation Probability</h3>
+                        <div style="position: relative; height: 300px;">
+                            <canvas id="precipChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendations -->
+                <div class="ai-section">
+                    <h3>AI Weather & Health Insights</h3>
+                    <div class="ai-recommendation">
+                        <div class="ai-avatar">🤖</div>
+                        <div class="ai-content">
+                            <div class="typing-indicator hidden">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <div id="aiRecommendation" class="ai-text"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="export-section">
+                    <h3>Export Data</h3>
+                    <div class="export-buttons">
+                        <button id="exportCSV" class="btn btn--outline">
+                            📊 Export CSV
+                        </button>
+                        <button id="exportJSON" class="btn btn--outline">
+                            💾 Export JSON
+                        </button>
+                        <button id="exportPDF" class="btn btn--outline">
+                            📄 Generate Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button id="startOver" class="btn btn--outline">Start Over</button>
+                    <button id="shareResults" class="btn btn--primary">Share Results</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- JavaScript -->
+    <!-- ML model scripts: load model definitions first, then integration that exposes prediction functions -->
+    <script src="weather_ml_model.js"></script>
+    <script src="weather_ml_integration.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
